@@ -51,6 +51,11 @@ from db.tools import (
     sample_data,
 )
 from llm import call_llm
+from ml.classifier import IntentClassifier
+from ml.matcher import FieldMatcher
+
+_intent_clf = IntentClassifier()
+_field_matcher = FieldMatcher()
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -109,9 +114,10 @@ def disambiguate(state: AgentState) -> AgentState:
     Classify the user's question and identify the most relevant table.
 
     Strategy (in priority order):
-      1. Keyword-based rule detection (fast, reliable for data questions)
-      2. LLM classification as fallback for ambiguous cases
-      3. Fuzzy table-name matching
+      1. Exact table-name substring match (fastest, most reliable)
+      2. TF-IDF field matching (replaces manual alias dict)
+      3. sklearn intent classifier (replaces LLM for ambiguous intent)
+      4. LLM table selection as last resort when table is still unknown
 
     Sets: intent, target_table
     """
@@ -119,64 +125,22 @@ def disambiguate(state: AgentState) -> AgentState:
     question_lower = question.lower()
     available = [r[0] for r in get_connection_tables()]
 
-    # ── 1. Rule-based table detection ────────────────────────────────────────
-    # Check if any known table name appears in the question
-    matched_table: str | None = None
-    for t in available:
-        if t.lower() in question_lower or t.lower().replace("_", " ") in question_lower:
-            matched_table = t
-            break
-    
-    # Fallback aliases
+    # ── 1. Exact table-name match ─────────────────────────────────────────────
+    matched_table: str | None = next(
+        (t for t in available
+         if t.lower() in question_lower or t.lower().replace("_", " ") in question_lower),
+        None,
+    )
+
+    # ── 2. TF-IDF table match (covers aliases like "taxi" → "nyc_taxi") ───────
     if not matched_table:
-        if "taxi" in question_lower:
-            matched_table = "nyc_taxi"
-        elif "weather" in question_lower:
-            matched_table = "seattle_weather"
-        elif "movie" in question_lower:
-            matched_table = "movies"
-        elif "car" in question_lower:
-            matched_table = "cars"
-    # ── 2. Rule-based intent detection ───────────────────────────────────────
-    # Strong data-query signals: mentions a known table OR asks for statistics
-    DATA_KEYWORDS = {
-        "average", "avg", "mean", "total", "sum", "count", "how many", "how much",
-        "top", "bottom", "highest", "lowest", "most", "least", "best", "worst",
-        "percent", "percentage", "distribution", "correlation", "compare",
-        "which", "what is the", "list", "show me", "give me",
-        "columns", "schema", "fields", "dataset", "table", "data",
-        "trips", "fare", "tip", "revenue", "weather", "rainy", "warm",
-        "movie", "genre", "horsepower", "cylinders", "mpg", "fuel",
-        "pickup", "dropoff", "night", "day",
-    }
-    has_data_keyword = any(kw in question_lower for kw in DATA_KEYWORDS)
-    rule_intent = "data_query" if (matched_table or has_data_keyword) else None
+        matched_table = _field_matcher.match_table(question, available)
 
-    # ── 3. LLM classification (only for ambiguous cases) ─────────────────────
-    if rule_intent is None:
-        tables_info = list_tables()
-        prompt = f"""\
-You are a data assistant router.
+    # ── 3. Intent classification (sklearn) ────────────────────────────────────
+    intent = "data_query" if matched_table else _intent_clf.predict(question)
 
-{tables_info}
-
-User: "{question}"
-
-Is this a DATA QUERY (needs SQL/data lookup) or GENERAL CHAT?
-Reply with exactly one of: data_query OR general_chat
-
-Answer:"""
-        raw = call_llm(prompt, stop=["\n", " ", "."], max_tokens=15, temperature=0.0)
-        llm_intent = "data_query" if "data" in raw.lower() else "general_chat"
-        intent = llm_intent
-    else:
-        intent = rule_intent
-
-    # ── 4. Table selection ────────────────────────────────────────────────────
-    if matched_table:
-        table = matched_table
-    elif intent == "data_query":
-        # No explicit table mentioned — ask the LLM to pick one
+    # ── 4. LLM table selection when intent=data_query but table still unknown ─
+    if intent == "data_query" and not matched_table:
         tables_info = list_tables()
         prompt = f"""\
 {tables_info}
@@ -187,19 +151,16 @@ Which single table name from the list above is most relevant?
 Reply with ONLY the table name (e.g.: nyc_taxi):"""
         raw = call_llm(prompt, stop=["\n", " ", ".", ","], max_tokens=20, temperature=0.0)
         raw = raw.strip().lower()
-        # Validate
         if raw in available:
-            table = raw
+            matched_table = raw
         else:
-            # Fuzzy fallback
-            table = next(
+            matched_table = next(
                 (t for t in available if t in raw or raw in t),
-                available[0] if available else "none"
+                available[0] if available else None,
             )
-    else:
-        table = "none"
 
-    print(f"  [disambiguate] intent={intent}, table={table}, rule={rule_intent is not None}")
+    table = matched_table or "none"
+    print(f"  [disambiguate] intent={intent}, table={table}")
     return {**state, "intent": intent, "target_table": table}
 
 
@@ -216,11 +177,24 @@ def get_connection_tables() -> list[tuple]:
 def schema_inspector(state: AgentState) -> AgentState:
     """
     Fetch schema + sample data for the target table.
+    Prepends a TF-IDF-ranked list of columns most relevant to the question
+    so the query_planner focuses on the right fields immediately.
 
     Sets: schema_context
     """
     table = state["target_table"]
+    question = state["user_question"]
     ctx = _schema_prompt(table)
+
+    if table != "none":
+        try:
+            cols = [row[0] for row in get_connection().execute(f"DESCRIBE {table}").fetchall()]
+            relevant = _field_matcher.match_columns(question, cols)
+            if relevant:
+                ctx = f"Likely relevant columns: {', '.join(relevant)}\n\n" + ctx
+        except Exception:
+            pass
+
     print(f"  [schema_inspector] loaded context for '{table}' ({len(ctx)} chars)")
     return {**state, "schema_context": ctx}
 

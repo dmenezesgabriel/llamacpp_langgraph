@@ -1,0 +1,14 @@
+[project]
+name = "llamacpp-langgraph"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "duckdb>=1.5.0",
+    "langgraph>=1.2.6",
+    "llama-cpp-python>=0.3.30",
+]
+
+[[tool.uv.index]]
+url = "https://abetlen.github.io/llama-cpp-python/whl/cpu"

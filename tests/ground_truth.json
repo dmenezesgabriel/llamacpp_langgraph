@@ -1,0 +1,550 @@
+[
+  {
+    "id": "Q1",
+    "question": "What datasets / tables do you have available?",
+    "sql": "SHOW TABLES",
+    "columns": [
+      "name"
+    ],
+    "rows": [
+      [
+        "cars"
+      ],
+      [
+        "movies"
+      ],
+      [
+        "nyc_taxi"
+      ],
+      [
+        "seattle_weather"
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q2",
+    "question": "What columns are in the nyc_taxi table?",
+    "sql": "DESCRIBE nyc_taxi",
+    "columns": [
+      "column_name",
+      "column_type",
+      "null",
+      "key",
+      "default",
+      "extra"
+    ],
+    "rows": [
+      [
+        "vendor_id",
+        "VARCHAR",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "pickup_at",
+        "TIMESTAMP",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "dropoff_at",
+        "TIMESTAMP",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "passenger_count",
+        "TINYINT",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "trip_distance",
+        "FLOAT",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "rate_code_id",
+        "VARCHAR",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "store_and_fwd_flag",
+        "VARCHAR",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "pickup_location_id",
+        "INTEGER",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "dropoff_location_id",
+        "INTEGER",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "payment_type",
+        "VARCHAR",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "fare_amount",
+        "FLOAT",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "extra",
+        "FLOAT",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "mta_tax",
+        "FLOAT",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "tip_amount",
+        "FLOAT",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "tolls_amount",
+        "FLOAT",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "improvement_surcharge",
+        "FLOAT",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "total_amount",
+        "FLOAT",
+        "YES",
+        null,
+        null,
+        null
+      ],
+      [
+        "congestion_surcharge",
+        "FLOAT",
+        "YES",
+        null,
+        null,
+        null
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q3",
+    "question": "What is the average fare amount and average tip amount for NYC taxi trips?",
+    "sql": "SELECT ROUND(AVG(fare_amount),2) AS avg_fare, ROUND(AVG(tip_amount),2) AS avg_tip FROM nyc_taxi",
+    "columns": [
+      "avg_fare",
+      "avg_tip"
+    ],
+    "rows": [
+      [
+        18.51,
+        2.22
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q4",
+    "question": "What are the top 5 pickup locations by number of trips in the NYC taxi data?",
+    "sql": "SELECT pickup_location_id, COUNT(*) AS trips\n            FROM nyc_taxi\n            GROUP BY pickup_location_id\n            ORDER BY trips DESC\n            LIMIT 5",
+    "columns": [
+      "pickup_location_id",
+      "trips"
+    ],
+    "rows": [
+      [
+        237,
+        3435
+      ],
+      [
+        161,
+        3106
+      ],
+      [
+        236,
+        2943
+      ],
+      [
+        162,
+        2751
+      ],
+      [
+        186,
+        2576
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q5",
+    "question": "In the seattle_weather dataset, how many rainy days were there each year?",
+    "sql": "SELECT YEAR(date) AS year, COUNT(*) AS rainy_days\n            FROM seattle_weather\n            WHERE weather = 'rain'\n            GROUP BY year\n            ORDER BY year",
+    "columns": [
+      "year",
+      "rainy_days"
+    ],
+    "rows": [
+      [
+        2012,
+        191
+      ],
+      [
+        2013,
+        158
+      ],
+      [
+        2014,
+        148
+      ],
+      [
+        2015,
+        144
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q6",
+    "question": "Which 5 movies have the highest worldwide gross?",
+    "sql": "SELECT Title, \"Worldwide Gross\"\n            FROM movies\n            WHERE \"Worldwide Gross\" IS NOT NULL\n            ORDER BY \"Worldwide Gross\" DESC\n            LIMIT 5",
+    "columns": [
+      "Title",
+      "Worldwide Gross"
+    ],
+    "rows": [
+      [
+        "\"Avatar\"",
+        2767891499
+      ],
+      [
+        "\"Titanic\"",
+        1842879955
+      ],
+      [
+        "\"The Lord of the Rings: The Return of the King\"",
+        1133027325
+      ],
+      [
+        "\"Pirates of the Caribbean: Dead Man's Chest\"",
+        1065659812
+      ],
+      [
+        "\"Toy Story 3\"",
+        1046340665
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q7",
+    "question": "What is the average horsepower by number of cylinders in the cars dataset?",
+    "sql": "SELECT Cylinders, ROUND(AVG(Horsepower),1) AS avg_hp, COUNT(*) AS cars\n            FROM cars\n            WHERE Horsepower IS NOT NULL\n            GROUP BY Cylinders\n            ORDER BY Cylinders",
+    "columns": [
+      "Cylinders",
+      "avg_hp",
+      "cars"
+    ],
+    "rows": [
+      [
+        3,
+        99.3,
+        4
+      ],
+      [
+        4,
+        78.5,
+        202
+      ],
+      [
+        5,
+        82.3,
+        3
+      ],
+      [
+        6,
+        101.5,
+        83
+      ],
+      [
+        8,
+        158.5,
+        108
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q8",
+    "question": "What is the total revenue (total_amount) collected in the NYC taxi dataset?",
+    "sql": "SELECT ROUND(SUM(total_amount),2) AS total_revenue FROM nyc_taxi",
+    "columns": [
+      "total_revenue"
+    ],
+    "rows": [
+      [
+        1842217.63
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q9",
+    "question": "What percentage of NYC taxi trips are paid by credit card vs cash?",
+    "sql": "SELECT payment_type,\n                   COUNT(*) AS trips,\n                   ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 2) AS pct\n            FROM nyc_taxi\n            WHERE payment_type IN ('1','2')\n            GROUP BY payment_type\n            ORDER BY trips DESC",
+    "columns": [
+      "payment_type",
+      "trips",
+      "pct"
+    ],
+    "rows": [
+      [
+        "1",
+        53884,
+        72.34
+      ],
+      [
+        "2",
+        20605,
+        27.66
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q10",
+    "question": "What are the top 5 longest taxi trips by distance?",
+    "sql": "SELECT trip_distance, fare_amount, total_amount, passenger_count\n            FROM nyc_taxi\n            ORDER BY trip_distance DESC\n            LIMIT 5",
+    "columns": [
+      "trip_distance",
+      "fare_amount",
+      "total_amount",
+      "passenger_count"
+    ],
+    "rows": [
+      [
+        58.310001373291016,
+        152.0,
+        198.64999389648438,
+        1
+      ],
+      [
+        53.880001068115234,
+        200.0,
+        270.04998779296875,
+        1
+      ],
+      [
+        51.650001525878906,
+        185.0,
+        221.58999633789062,
+        1
+      ],
+      [
+        50.0,
+        200.0,
+        262.6700134277344,
+        0
+      ],
+      [
+        46.04999923706055,
+        250.0,
+        275.79998779296875,
+        1
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q11",
+    "question": "What is the warmest month on average in Seattle?",
+    "sql": "SELECT MONTH(date) AS month, ROUND(AVG(temp_max),1) AS avg_temp_max\n            FROM seattle_weather\n            GROUP BY month\n            ORDER BY avg_temp_max DESC\n            LIMIT 1",
+    "columns": [
+      "month",
+      "avg_temp_max"
+    ],
+    "rows": [
+      [
+        8,
+        26.1
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q12",
+    "question": "How many movies are there per genre in the movies dataset?",
+    "sql": "SELECT \"Major Genre\" AS genre, COUNT(*) AS count\n            FROM movies\n            WHERE \"Major Genre\" IS NOT NULL\n            GROUP BY genre\n            ORDER BY count DESC",
+    "columns": [
+      "genre",
+      "count"
+    ],
+    "rows": [
+      [
+        "Drama",
+        789
+      ],
+      [
+        "Comedy",
+        675
+      ],
+      [
+        "Action",
+        420
+      ],
+      [
+        "Adventure",
+        274
+      ],
+      [
+        "Thriller/Suspense",
+        239
+      ],
+      [
+        "Horror",
+        219
+      ],
+      [
+        "Romantic Comedy",
+        137
+      ],
+      [
+        "Musical",
+        53
+      ],
+      [
+        "Documentary",
+        43
+      ],
+      [
+        "Western",
+        36
+      ],
+      [
+        "Black Comedy",
+        36
+      ],
+      [
+        "Concert/Performance",
+        5
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q13",
+    "question": "Which country of origin has the most fuel-efficient cars on average?",
+    "sql": "SELECT Origin, ROUND(AVG(Miles_per_Gallon),1) AS avg_mpg, COUNT(*) AS count\n            FROM cars\n            WHERE Miles_per_Gallon IS NOT NULL\n            GROUP BY Origin\n            ORDER BY avg_mpg DESC",
+    "columns": [
+      "Origin",
+      "avg_mpg",
+      "count"
+    ],
+    "rows": [
+      [
+        "Japan",
+        30.5,
+        79
+      ],
+      [
+        "Europe",
+        27.9,
+        70
+      ],
+      [
+        "USA",
+        20.1,
+        249
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q14",
+    "question": "How many NYC taxi trips happened at night (10pm - 6am) vs during the day?",
+    "sql": "SELECT\n                CASE WHEN HOUR(pickup_at) >= 22 OR HOUR(pickup_at) < 6\n                     THEN 'night' ELSE 'day'\n                END AS period,\n                COUNT(*) AS trips\n            FROM nyc_taxi\n            GROUP BY period\n            ORDER BY period",
+    "columns": [
+      "period",
+      "trips"
+    ],
+    "rows": [
+      [
+        "day",
+        61338
+      ],
+      [
+        "night",
+        13650
+      ]
+    ],
+    "error": null
+  },
+  {
+    "id": "Q15",
+    "question": "What is the correlation between fare amount and tip amount in the taxi dataset?",
+    "sql": "SELECT ROUND(CORR(fare_amount, tip_amount)::DOUBLE, 4) AS correlation\n            FROM nyc_taxi\n            WHERE fare_amount > 0 AND tip_amount >= 0",
+    "columns": [
+      "correlation"
+    ],
+    "rows": [
+      [
+        0.0018
+      ]
+    ],
+    "error": null
+  }
+]

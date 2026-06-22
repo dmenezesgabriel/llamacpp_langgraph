@@ -1,9 +1,14 @@
 """
-LangGraph + llama-cpp-python + DuckDB data analyst demo.
+LangGraph + DuckDB data analyst demo.
 
-Model  : LFM2.5-8B-A1B-Q4_K_M.gguf (Liquid Foundation Model 2.5)
+Backends: llama-cpp-python (default) or LiteLLM → GitHub Copilot
 Datasets: NYC Taxi (April 2019), Seattle Weather, Movies, Cars
-          — all loaded into an in-memory DuckDB connection at startup.
+
+Usage:
+  python main.py                                    # llama-cpp (default)
+  python main.py --backend litellm                  # GitHub Copilot gpt-4o-mini
+  python main.py --backend litellm --model github_copilot/claude-sonnet-4-6
+  python main.py --backend litellm -i               # interactive + Copilot
 
 Graph topology:
   disambiguate → [schema_inspector → query_planner → query_executor → reflector]* → responder
@@ -11,13 +16,26 @@ Graph topology:
 
 from __future__ import annotations
 
-# Initialise DuckDB datasets first (so the LLM sees them via tools).
-from db.loader import get_connection
+import argparse
 
-# Trigger dataset load
-_conn = get_connection()
 
-# Now load the graph (which imports the LLM, triggering model load)
+def _parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="LangGraph data analyst agent")
+    p.add_argument(
+        "--backend",
+        choices=["llamacpp", "litellm"],
+        default="llamacpp",
+        help="LLM backend to use (default: llamacpp)",
+    )
+    p.add_argument(
+        "--model",
+        default="github_copilot/gpt-4o-mini",
+        help="Model name for the litellm backend",
+    )
+    p.add_argument("-i", "--interactive", action="store_true", help="Run in interactive REPL mode")
+    return p.parse_args()
+
+
 from graph import build_graph  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -138,9 +156,15 @@ def interactive_mode() -> None:
 
 
 if __name__ == "__main__":
-    import sys
+    args = _parse_args()
 
-    if "--interactive" in sys.argv or "-i" in sys.argv:
+    import llm as _llm_module
+    _llm_module.configure(backend=args.backend, model=args.model)
+
+    from db.loader import get_connection as _get_conn
+    _get_conn()  # load datasets before the graph runs
+
+    if args.interactive:
         interactive_mode()
     else:
         run_demo()
